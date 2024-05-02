@@ -52,6 +52,18 @@ justify-content: space-evenly;
   }
 }
 
+
+.bookDiv2{
+
+  display:flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  text-align: left;
+  }
+  
+
+
 .myDiv {
   position: relative;
   width: 100;

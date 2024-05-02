@@ -1,7 +1,7 @@
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link} from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   activeButton: {
@@ -32,12 +32,26 @@ const Navbar = () => {
 
   return (
     <div style={{justifyContent:"center",display:"flex",margin:"15px"}}>
-      <Button className={getButtonClassName("/menu")} style={{height:"40px",margin:"3px"}} component="a" href="/menu">
+
+      <Link to="/menu" style={{ textDecoration: "none" }}>
+      <Button className={getButtonClassName("/menu")} style={{height:"40px",margin:"3px"}} >
         <p style={{fontSize:"24px"}}>Меню</p>
       </Button>
-      <Button className={getButtonClassName("/booking")}  style={{height:"40px",margin:"3px"}} component="a" href="/booking">
+      </Link>
+
+      <Link to="/booking" style={{ textDecoration: "none" }}>
+      <Button className={getButtonClassName("/booking")}  style={{height:"40px",margin:"3px"}} >
       <p style={{fontSize:"24px"}}>Бронирование</p>
       </Button>
+      </Link>
+
+
+      <Link to="/check" style={{ textDecoration: "none" }}>
+      <Button className={getButtonClassName("/check")}  style={{height:"40px",margin:"3px"}} >
+      <p style={{fontSize:"24px"}}>Чек</p>
+      </Button>
+      </Link>
+      
     </div>
   );
 };
