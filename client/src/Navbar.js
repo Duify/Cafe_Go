@@ -31,7 +31,7 @@ const Navbar = () => {
   };
 
   return (
-    <div style={{justifyContent:"center",display:"flex",margin:"15px"}}>
+    <div style={{justifyContent:"center",display:"flex",margin:"15px", marginTop:"35px"}}>
 
       <Link to="/menu" style={{ textDecoration: "none" }}>
       <Button className={getButtonClassName("/menu")} style={{height:"40px",margin:"3px"}} >

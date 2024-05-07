@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"time"
 
@@ -39,6 +40,8 @@ type Dish struct {
 	Name     string `json:"dish_name"`
 	Cost     int    `json:"dish_cost"`
 	ImageURL string `json:"dish_img"`
+	Category string `json:"dish_category"`
+	Quantity int    `json:"dish_quantity"`
 }
 
 type User struct {
@@ -49,6 +52,16 @@ type User struct {
 type Claims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
+}
+
+type DishQuantityResponse struct {
+	Quantity int `json:"quantity"`
+}
+
+type RegisterRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Username string `json:"username"`
 }
 
 var mySigningKey = []byte("secret")
@@ -88,6 +101,12 @@ func main() {
 	router.HandleFunc("/api/dishes", getDishesHandler).Methods("GET")
 
 	router.HandleFunc("/api/login", loginHandler).Methods("POST")
+
+	router.HandleFunc("/api/checkDishQuantity", CheckDishQuantity).Methods("POST")
+
+	router.HandleFunc("/api/returnDish", ReturnDish).Methods("POST")
+
+	router.HandleFunc("/api/register", registerHandler).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(":8000", c.Handler(router)))
 }
@@ -154,7 +173,7 @@ func createBooking(w http.ResponseWriter, r *http.Request) {
 func getDishesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	rows, err := db.Query("SELECT dish_id, dish_name, dish_cost, dish_img FROM dishes")
+	rows, err := db.Query("SELECT dish_id, dish_name, dish_cost, dish_img, category, dish_quantity FROM dishes")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -165,7 +184,7 @@ func getDishesHandler(w http.ResponseWriter, r *http.Request) {
 	var dishes []Dish
 	for rows.Next() {
 		var dish Dish
-		err := rows.Scan(&dish.ID, &dish.Name, &dish.Cost, &dish.ImageURL)
+		err := rows.Scan(&dish.ID, &dish.Name, &dish.Cost, &dish.ImageURL, &dish.Category, &dish.Quantity)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -221,6 +240,101 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the token as a JSON response
-	response := map[string]string{"token": tokenString}
+	trimmedUsername := strings.TrimSpace(username)
+	response := map[string]string{"token": tokenString, "username": trimmedUsername}
 	json.NewEncoder(w).Encode(response)
+}
+
+func CheckDishQuantity(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var dish Dish
+	err := json.NewDecoder(r.Body).Decode(&dish)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Найти блюдо в базе данных
+	row := db.QueryRow("SELECT dish_quantity FROM dishes WHERE dish_id=$1", dish.ID)
+	var quantity int
+	err = row.Scan(&quantity)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if quantity > 0 {
+		_, err = db.Exec("UPDATE dishes SET dish_quantity=$1 WHERE dish_id=$2", quantity-1, dish.ID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "Товар кончился", http.StatusBadRequest)
+		return
+	}
+
+	response := DishQuantityResponse{Quantity: quantity - 1}
+	json.NewEncoder(w).Encode(response)
+}
+
+func ReturnDish(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var dish Dish
+	err := json.NewDecoder(r.Body).Decode(&dish)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Найти блюдо в базе данных
+	row := db.QueryRow("SELECT dish_quantity FROM dishes WHERE dish_id=$1", dish.ID)
+	var quantity int
+	err = row.Scan(&quantity)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Увеличить количество блюда на 1
+	_, err = db.Exec("UPDATE dishes SET dish_quantity=$1 WHERE dish_id=$2", quantity+1, dish.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Вернуть количество блюда в ответе
+	response := DishQuantityResponse{Quantity: quantity + 1}
+	json.NewEncoder(w).Encode(response)
+}
+
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var user RegisterRequest
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Check if the user already exists
+	var existingUser string
+	err = db.QueryRow("SELECT username FROM users WHERE login=$1", user.Login).Scan(&existingUser)
+	if err != sql.ErrNoRows {
+		http.Error(w, "User already exists", http.StatusBadRequest)
+		return
+	}
+
+	// Insert the new user into the database
+	_, err = db.Exec("INSERT INTO users (login, password, username) VALUES ($1, $2, $3)", user.Login, user.Password, user.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a success response
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
 }

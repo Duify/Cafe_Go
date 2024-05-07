@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import cort from "./cort_background.jpg"
 
 function Login() {
   const [login, setLogin] = useState("");
@@ -16,7 +17,8 @@ function Login() {
       });
 
       if (response.status === 200) {
-        localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("user", JSON.stringify(response.data.token));
+        localStorage.setItem("username", response.data.username);
         
         window.location.href = "/booking"; // перенаправить пользователя на главную страницу
       }
@@ -30,6 +32,7 @@ function Login() {
   };
 
   return (
+    <div style={{background: `linear-gradient( #E2E2FD 150px, transparent 600px), url(${cort})`, width:"100vw", height:"83.5%",backgroundRepeat:"no-repeat",overflow:"hidden",backgroundSize:"cover"}}>
     <div style={{display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
       <h2>Авторизация</h2>
       {error && <div>{error}</div>}
@@ -80,6 +83,7 @@ function Login() {
                 borderColor:"transparent",
                 boxShadow:"0px 4px 5px rgb(0,0,0,0.3)" }} type="submit">Войти</button>
       </form>
+    </div>
     </div>
   );
 }

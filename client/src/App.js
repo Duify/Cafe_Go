@@ -10,6 +10,7 @@ import BookingContext from "./BookingContext";
 import Menu from "./Menu";
 import { SelectedDishesProvider } from "./SelectedDishesContext";
 import Login from "./Login";
+import Register from "./Register";
 
 function App() {
 
@@ -18,7 +19,7 @@ function App() {
   return (
     <BookingContext.Provider value={{ bookingData, setBookingData }}>
       <SelectedDishesProvider >
-    <div className="App" style= {{background: '#E2E2FD',width:'100vw',height:'100vh'}}>
+    <div className="App" style= {{background: '#E2E2FD',width:'100vw',height:'100vh',backgroundSize:"cover",overflow:"auto"}}>
   
       
       <Router>
@@ -29,6 +30,7 @@ function App() {
         <Route exact path="/booking" element={<BookingPage />} />
         <Route exact path="/check" element={<CheckPage />} />
         <Route exact path="/login" element={<Login />} />
+        <Route exact path="/register" element={<Register />} />
         <Route path="/" element={<Navigate to="/menu" replace />} />
       
       </Routes>
