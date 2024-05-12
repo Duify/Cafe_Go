@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -50,7 +49,8 @@ type User struct {
 }
 
 type Claims struct {
-	Username string `json:"username"`
+	Username   string `json:"username"`
+	UserStatus string `json:"userStatus"`
 	jwt.StandardClaims
 }
 
@@ -107,6 +107,10 @@ func main() {
 	router.HandleFunc("/api/returnDish", ReturnDish).Methods("POST")
 
 	router.HandleFunc("/api/register", registerHandler).Methods("POST")
+
+	router.HandleFunc("/api/addDish", addDishHandler).Methods("POST")
+
+	router.HandleFunc("/api/updateDish", updateDishHandler).Methods("PUT")
 
 	log.Fatal(http.ListenAndServe(":8000", c.Handler(router)))
 }
@@ -206,10 +210,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получить пользователя из базы данных
-	row := db.QueryRow("SELECT password, username FROM users WHERE login=$1", user.Login)
+	row := db.QueryRow("SELECT password, username, userstatus FROM users WHERE login=$1", user.Login)
 	var dbPassword string
 	var username string
-	err = row.Scan(&dbPassword, &username)
+	var userStatus string
+	err = row.Scan(&dbPassword, &username, &userStatus)
+
 	if err != nil {
 		http.Error(w, "Invalid login or password ahaha", http.StatusUnauthorized)
 		return
@@ -225,7 +231,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new token with claims
 	claims := &Claims{
-		Username: username,
+		Username:   username,
+		UserStatus: userStatus,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: someExpirationTime,
 		},
@@ -241,7 +248,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the token as a JSON response
 	trimmedUsername := strings.TrimSpace(username)
-	response := map[string]string{"token": tokenString, "username": trimmedUsername}
+	response := map[string]string{"token": tokenString, "username": trimmedUsername, "user_status": userStatus}
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -328,7 +335,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert the new user into the database
-	_, err = db.Exec("INSERT INTO users (login, password, username) VALUES ($1, $2, $3)", user.Login, user.Password, user.Username)
+	_, err = db.Exec("INSERT INTO users (login, password, username, user_status) VALUES ($1, $2, $3, $4)", user.Login, user.Password, user.Username, 0)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -337,4 +344,50 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	// Return a success response
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
+}
+
+func addDishHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var dish Dish
+	err := json.NewDecoder(r.Body).Decode(&dish)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Insert the new dish into the database
+	_, err = db.Exec("INSERT INTO dishes (dish_name, dish_cost, dish_img, category, dish_quantity) VALUES ($1, $2, $3, $4, $5)", dish.Name, dish.Cost, dish.ImageURL, dish.Category, dish.Quantity)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a success response
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Dish created successfully"})
+}
+
+func updateDishHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var dish Dish
+	err := json.NewDecoder(r.Body).Decode(&dish)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Check if the user is an admin
+
+	// Update the dish in the database
+	_, err = db.Exec("UPDATE dishes SET dish_name=$1, dish_cost=$2, dish_img=$3, category=$4, dish_quantity=$5 WHERE dish_id=$6", dish.Name, dish.Cost, dish.ImageURL, dish.Category, dish.Quantity, dish.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Dish updated successfully"})
 }

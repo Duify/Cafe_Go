@@ -19,6 +19,9 @@ function Login() {
       if (response.status === 200) {
         localStorage.setItem("user", JSON.stringify(response.data.token));
         localStorage.setItem("username", response.data.username);
+        localStorage.setItem("userStatus", response.data.user_status);
+        
+        
         
         window.location.href = "/booking"; // перенаправить пользователя на главную страницу
       }

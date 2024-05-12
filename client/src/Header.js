@@ -19,6 +19,7 @@ export default function Header() {
 
   const logout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("userStatus");
     navigate("/booking");
   };
 

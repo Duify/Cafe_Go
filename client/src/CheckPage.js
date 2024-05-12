@@ -33,7 +33,7 @@ const CheckPage = () => {
     <div style={{display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
         <h1>Ваш заказ</h1>
         <div style={{display:"flex"}}>
-        <img src={Waiter} style={{ width: 200, height: 200 }}/>
+       <img src={Waiter} style={{ width: 200, height: 200 }}/>
         <div style={{ textAlign:"left",
         backgroundColor:"white",
         padding:"5px", 
